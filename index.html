@@ -625,22 +625,13 @@
   }
   .kendoku-cell.last-col{border-right:none}
   .kendoku-cell.last-row{border-bottom:none}
-  /* Cage borders: combine via multiple box-shadows */
-  .kendoku-cell.cage-top{box-shadow:inset 0 2.5px 0 0 #000}
-  .kendoku-cell.cage-right{box-shadow:inset -2.5px 0 0 0 #000}
-  .kendoku-cell.cage-bottom{box-shadow:inset 0 -2.5px 0 0 #000}
-  .kendoku-cell.cage-left{box-shadow:inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-top.cage-right{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000}
-  .kendoku-cell.cage-top.cage-bottom{box-shadow:inset 0 2.5px 0 0 #000, inset 0 -2.5px 0 0 #000}
-  .kendoku-cell.cage-top.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-right.cage-bottom{box-shadow:inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000}
-  .kendoku-cell.cage-right.cage-left{box-shadow:inset -2.5px 0 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-bottom.cage-left{box-shadow:inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-top.cage-right.cage-bottom{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000}
-  .kendoku-cell.cage-top.cage-right.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-top.cage-bottom.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-right.cage-bottom.cage-left{box-shadow:inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
-  .kendoku-cell.cage-top.cage-right.cage-bottom.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+  /* Cage borders — use real borders (html2canvas safe).
+     Each thick line is drawn only ONCE by the upper/left cell,
+     so no double-drawing or filling. */
+  .kendoku-cell.cage-right{border-right:2.5px solid #000}
+  .kendoku-cell.cage-bottom{border-bottom:2.5px solid #000}
+  .kendoku-cell.last-col.cage-right{border-right:none}
+  .kendoku-cell.last-row.cage-bottom{border-bottom:none}
 
   .cage-label{
     position:absolute;
@@ -686,22 +677,11 @@
   #print-area .puzzle-grid{border-width:1.8pt}
   #print-area .sudoku-cell.box-right{border-right-width:1.4pt}
   #print-area .sudoku-cell.box-bottom{border-bottom-width:1.4pt}
-  /* Kendoku cage borders for print — thicker */
-  #print-area .kendoku-cell.cage-top{box-shadow:inset 0 1.6pt 0 0 #000}
-  #print-area .kendoku-cell.cage-right{box-shadow:inset -1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-bottom{box-shadow:inset 0 -1.6pt 0 0 #000}
-  #print-area .kendoku-cell.cage-left{box-shadow:inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-right{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-bottom{box-shadow:inset 0 1.6pt 0 0 #000, inset 0 -1.6pt 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-right.cage-bottom{box-shadow:inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000}
-  #print-area .kendoku-cell.cage-right.cage-left{box-shadow:inset -1.6pt 0 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-bottom.cage-left{box-shadow:inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-right.cage-bottom{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-right.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-bottom.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-right.cage-bottom.cage-left{box-shadow:inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
-  #print-area .kendoku-cell.cage-top.cage-right.cage-bottom.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  /* Kendoku cage borders for print — thicker, using real borders */
+  #print-area .kendoku-cell.cage-right{border-right:1.6pt solid #000}
+  #print-area .kendoku-cell.cage-bottom{border-bottom:1.6pt solid #000}
+  #print-area .kendoku-cell.last-col.cage-right{border-right:none}
+  #print-area .kendoku-cell.last-row.cage-bottom{border-bottom:none}
   #print-area .puzzle-corner{top:4mm;right:5mm}
 
   /* Layout 1 — full-page card */
@@ -1688,10 +1668,12 @@ function renderKendokuCard(data, puzzleNum, sizeClass, isAnswer){
       if(c === size-1) classes.push('last-col');
       if(r === size-1) classes.push('last-row');
       if(isSingle) classes.push('single');
-      if(r === 0 || cageMap[r-1][c] !== cageId) classes.push('cage-top');
-      if(r === size-1 || cageMap[r+1][c] !== cageId) classes.push('cage-bottom');
-      if(c === 0 || cageMap[r][c-1] !== cageId) classes.push('cage-left');
-      if(c === size-1 || cageMap[r][c+1] !== cageId) classes.push('cage-right');
+      // Only annotate the right & bottom edges of cells where the cage changes.
+      // The top edge of a cell == the bottom edge of the cell above (drawn by neighbor).
+      // The left edge == the right edge of cell-to-left.
+      // Outer grid edges are handled by .puzzle-grid's own border.
+      if(r < size-1 && cageMap[r+1][c] !== cageId) classes.push('cage-bottom');
+      if(c < size-1 && cageMap[r][c+1] !== cageId) classes.push('cage-right');
 
       let labelHTML = '';
       if(isLeader && !isSingle){
