@@ -252,6 +252,74 @@
 
   .help-text{font-size:11.5px;color:var(--ink-muted);margin-top:5px;line-height:1.5}
 
+  /* ===== RULES CARD ===== */
+  .rules-card{
+    background:#fdf8eb;
+    border:1px solid #e8d9b0;
+    border-radius:8px;
+    padding:14px 16px;
+  }
+  .rule-section-title{
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);
+    letter-spacing:.06em;text-transform:uppercase;
+    margin-bottom:9px;display:flex;align-items:center;gap:8px;
+  }
+  .rule-section-title::before{
+    content:'';width:16px;height:1.5px;background:var(--gold);
+  }
+  .rule-item{
+    display:flex;gap:9px;margin-bottom:8px;
+    font-size:13px;line-height:1.55;align-items:flex-start;
+  }
+  .rule-item:last-child{margin-bottom:0}
+  .rule-num{
+    flex-shrink:0;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);color:#fff;
+    font-weight:700;font-family:'Fraunces',serif;font-size:11px;
+    display:inline-flex;align-items:center;justify-content:center;
+    margin-top:2px;
+  }
+  .rule-text{flex:1;color:var(--ink)}
+  .rule-text em{
+    background:#f4e4b8;color:var(--ink);
+    font-style:normal;padding:1px 5px;border-radius:3px;
+    font-weight:600;font-size:.95em;
+  }
+  .rule-text strong{color:var(--red);font-weight:700}
+  .rule-note{
+    font-size:12px;color:var(--ink-soft);
+    margin-top:9px;padding:8px 11px;
+    background:#fff;border-left:3px solid var(--gold);
+    border-radius:0 6px 6px 0;line-height:1.5;
+  }
+  .rule-note strong{color:var(--red);font-weight:700}
+  .rule-examples{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:6px;margin:6px 0 10px 29px;
+  }
+  @media (max-width:540px){
+    .rule-examples{grid-template-columns:1fr;margin-left:20px}
+  }
+  .rule-example{
+    display:flex;gap:8px;background:#fff;
+    padding:6px 10px;border-radius:5px;
+    font-size:11.5px;align-items:center;
+    border:1px solid #f0e4c4;
+  }
+  .rule-op-sample{
+    font-family:'Fraunces',serif;font-weight:900;
+    background:var(--ink);color:#fff;
+    padding:2px 7px;border-radius:4px;letter-spacing:-.02em;
+    font-size:12.5px;flex-shrink:0;line-height:1;
+  }
+  .rule-example > span:last-child{
+    color:var(--ink-soft);line-height:1.3;
+  }
+  .rule-example em{
+    background:#f4e4b8;font-style:normal;
+    padding:0 3px;border-radius:2px;font-weight:600;color:var(--ink);
+  }
+
   .btn{
     padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;
     border:none;border-radius:8px;cursor:pointer;transition:all .15s;
@@ -785,12 +853,12 @@
           <div class="section-title">難易度<span class="num">iii.</span></div>
           <div class="section-desc" id="diff-desc">數獨:由「提示數字」多寡決定。算獨:由「區域大小」與「運算種類」決定。</div>
           <div class="diff-grid">
-            <div class="diff-card" data-diff="0">
+            <div class="diff-card active" data-diff="0">
               <div class="diff-dots">●</div>
               <div class="diff-name">入門</div>
               <div class="diff-en">starter</div>
             </div>
-            <div class="diff-card active" data-diff="1">
+            <div class="diff-card" data-diff="1">
               <div class="diff-dots">● ●</div>
               <div class="diff-name">簡單</div>
               <div class="diff-en">easy</div>
@@ -816,6 +884,11 @@
       </div>
 
       <div>
+        <div class="section">
+          <div class="section-title">怎麼玩<span class="num">how to play</span></div>
+          <div class="rules-card" id="rules-content"></div>
+        </div>
+
         <div class="section">
           <div class="section-title">紙張與份數<span class="num">iv.</span></div>
 
@@ -934,7 +1007,7 @@ const state = {
   mode: 'sudoku',            // 'sudoku' | 'kendoku'
   symbol: 'number',          // 'number' | 'letter'  (sudoku only)
   size: 9,                   // 4 | 6 | 9
-  difficulty: 1,             // 0~4
+  difficulty: 0,             // 0~4
   layout: '1',               // '1' | '2' | '4'
   puzzleCount: 6,
   cardTitle: '數獨',
@@ -1247,6 +1320,7 @@ els('.type-card').forEach(c=>{
     }
     updateDiffHelp();
     updateOpsDisplay();
+    renderRulesContent();
   };
 });
 
@@ -1264,6 +1338,7 @@ els('[data-size]').forEach(b=>{
     b.classList.add('active');
     state.size = parseInt(b.dataset.size);
     updateDiffHelp();
+    renderRulesContent();
   };
 });
 
@@ -1326,9 +1401,73 @@ function updateOpsDisplay(){
   }).join('');
 }
 
+function renderRulesContent(){
+  const size = state.size;
+  const numRange = `1~${size}`;
+  let html;
+  if(state.mode === 'sudoku'){
+    const boxDesc = size === 4 ? '2×2 格' : size === 6 ? '2×3 格' : '3×3 格';
+    html = `
+      <div class="rule-section-title">數獨 · sudoku</div>
+      <div class="rule-item">
+        <span class="rule-num">1</span>
+        <span class="rule-text">每一<em>橫排</em>(共 ${size} 格)填入 <em>${numRange}</em>,各出現一次,不可重複</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">2</span>
+        <span class="rule-text">每一<em>直行</em>(共 ${size} 格)填入 <em>${numRange}</em>,各出現一次,不可重複</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">3</span>
+        <span class="rule-text">每一個<em>粗框九宮格</em>(${boxDesc})也要填入 <em>${numRange}</em>,各出現一次</span>
+      </div>
+      <div class="rule-note">題目給的數字為線索,不可改動。把所有空格填滿且符合以上三條規則,就算完成。</div>
+    `;
+  } else {
+    html = `
+      <div class="rule-section-title">基本規則 · 行 + 列</div>
+      <div class="rule-item">
+        <span class="rule-num">1</span>
+        <span class="rule-text">每一<em>橫排</em>(共 ${size} 格)填入 <em>${numRange}</em>,各出現一次,不可重複</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">2</span>
+        <span class="rule-text">每一<em>直行</em>(共 ${size} 格)填入 <em>${numRange}</em>,各出現一次,不可重複</span>
+      </div>
+      <div class="rule-note"><strong>※ 算獨「沒有」九宮格規則</strong>,只看行和列,這點和數獨不同。</div>
+
+      <div class="rule-section-title" style="margin-top:14px">區域算式規則 · cages</div>
+      <div class="rule-item">
+        <span class="rule-num">3</span>
+        <span class="rule-text">方格被切成多個<em>區域</em>(以粗框包圍),區域左上角標示<em>目標數字</em>和<em>運算符號</em></span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">4</span>
+        <span class="rule-text">區域內所有數字,依該運算結果須等於目標數字:</span>
+      </div>
+      <div class="rule-examples">
+        <div class="rule-example"><span class="rule-op-sample">12+</span><span>區域數字<em>相加</em>= 12</span></div>
+        <div class="rule-example"><span class="rule-op-sample">8×</span><span>區域數字<em>相乘</em>= 8</span></div>
+        <div class="rule-example"><span class="rule-op-sample">2−</span><span>兩格<em>大-小</em>= 2</span></div>
+        <div class="rule-example"><span class="rule-op-sample">3÷</span><span>兩格<em>大÷小</em>= 3</span></div>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">5</span>
+        <span class="rule-text"><em>單格區域</em>(只標一個數字、沒有運算符):該數字就是答案,可作為起手線索</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">6</span>
+        <span class="rule-text">同一區域內<em>數字可重複</em>(只要不違反行列規則,例如:L 型區域跨越不同行列就可重複)</span>
+      </div>
+    `;
+  }
+  el('#rules-content').innerHTML = html;
+}
+
 updateDiffHelp();
 updateMeta();
 updateOpsDisplay();
+renderRulesContent();
 
 /* ============================================================
    GENERATE
