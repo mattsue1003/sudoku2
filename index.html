@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>數獨 · 算獨紙本生成器 · Sudoku Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style id="dynamic-print-style">@page { size: A4 portrait; margin: 10mm; }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<style>
+  :root{
+    --bg:#f4ecda;
+    --paper:#fffaf0;
+    --paper-2:#faf4e3;
+    --ink:#1a120b;
+    --ink-soft:#5a4838;
+    --ink-muted:#8a7a68;
+    --line:#d4c5a8;
+    --line-soft:#e6dcc4;
+    --accent:#2d5e8a;
+    --accent-dark:#1f4566;
+    --accent-soft:#d4e2ee;
+    --gold:#c89414;
+    --gold-soft:#f4e4b8;
+    --red:#d63a2f;
+    --green:#3d6e36;
+    --shadow:0 1px 0 #d8c8a4, 0 6px 16px rgba(80,50,20,.08);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(ellipse at 15% 10%, rgba(45,94,138,.06) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 80%, rgba(200,148,20,.07) 0%, transparent 50%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /></filter><rect width='100' height='100' filter='url(%23n)' opacity='0.04'/></svg>");
+  }
+  ::selection{background:var(--accent);color:#fff}
+  button{font-family:inherit}
+
+  .app{max-width:1240px;margin:0 auto;padding:24px 20px 60px}
+  .header{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:20px 0 18px;margin-bottom:24px;
+    border-bottom:2.5px solid var(--ink);
+    position:relative;
+  }
+  .header::after{content:'';position:absolute;left:0;right:0;bottom:-7px;height:1.5px;background:var(--ink)}
+  .brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .logo{
+    width:42px;height:42px;border-radius:8px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color:#fff;display:inline-flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:900;font-size:22px;
+    box-shadow:0 2px 8px rgba(45,94,138,.3), inset -2px -2px 6px rgba(0,0,0,.15), inset 2px 2px 4px rgba(255,255,255,.3);
+    transform:translateY(8px);
+    position:relative;
+  }
+  .logo::after{
+    content:'';position:absolute;inset:6px;border:1.5px solid rgba(255,255,255,.35);border-radius:4px;
+    pointer-events:none;
+  }
+  .title{font-family:'Noto Serif TC',serif;font-weight:900;font-size:34px;letter-spacing:-.02em;line-height:1}
+  .title em{font-family:'Fraunces',serif;font-style:italic;font-weight:400;color:var(--accent);font-size:.85em;margin-left:4px}
+  .tagline{font-size:12px;color:var(--ink-muted);letter-spacing:.18em;text-transform:uppercase;margin-top:4px;font-family:'Fraunces',serif;font-style:italic;font-weight:400}
+
+  .tabs{
+    display:flex;gap:2px;margin-bottom:24px;
+    border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  .tab{
+    padding:14px 22px;background:transparent;border:none;cursor:pointer;
+    font-size:15px;font-weight:600;color:var(--ink-muted);
+    border-bottom:3px solid transparent;margin-bottom:-1px;
+    white-space:nowrap;transition:color .15s;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--ink);color:#fff;font-size:11px;font-weight:700;
+    font-family:'Fraunces',serif;
+  }
+  .tab.active .tab-num{background:var(--accent)}
+
+  .panel{display:none;animation:fadeIn .25s ease}
+  .panel.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .settings-grid{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:880px){.settings-grid{grid-template-columns:1fr}}
+
+  .section{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:22px;
+    box-shadow:var(--shadow);
+  }
+  .section + .section{margin-top:20px}
+  .section-title{
+    font-family:'Noto Serif TC',serif;font-weight:700;font-size:17px;
+    margin-bottom:16px;display:flex;align-items:center;gap:10px;
+  }
+  .section-title::before{
+    content:'';display:inline-block;width:5px;height:18px;
+    background:var(--accent);border-radius:1px;
+  }
+  .section-title .num{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;
+    color:var(--ink-muted);font-size:14px;margin-left:auto;
+  }
+  .section-desc{font-size:12.5px;color:var(--ink-muted);margin-bottom:14px;line-height:1.5}
+  .section-desc strong{color:var(--ink-soft)}
+
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .label{
+    display:block;font-size:12px;font-weight:600;
+    color:var(--ink-soft);margin-bottom:6px;
+    letter-spacing:.04em;text-transform:uppercase;
+  }
+  .input,.number{
+    width:100%;padding:10px 12px;font-family:inherit;font-size:14px;
+    background:#fff;border:1.5px solid var(--line);border-radius:7px;
+    color:var(--ink);transition:border-color .15s, box-shadow .15s;
+  }
+  .input:focus,.number:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,94,138,.12);
+  }
+
+  .seg{
+    display:inline-flex;background:#fff;border:1.5px solid var(--line);
+    border-radius:8px;padding:3px;gap:2px;width:100%;
+  }
+  .seg-btn{
+    flex:1;padding:8px 10px;background:transparent;border:none;
+    font-size:13px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;border-radius:5px;transition:all .15s;
+    font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .seg-btn:hover{color:var(--ink)}
+  .seg-btn.active{background:var(--ink);color:var(--paper)}
+  .seg-btn .seg-sub{font-size:10.5px;font-weight:500;opacity:.75;font-family:'Fraunces',serif;font-style:italic}
+
+  .type-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .type-card{
+    padding:16px 14px 14px;background:#fff;
+    border:1.5px solid var(--line);border-radius:10px;
+    cursor:pointer;text-align:left;transition:all .15s;
+    position:relative;
+    display:flex;align-items:flex-start;gap:12px;
+  }
+  .type-card:hover{border-color:var(--ink);transform:translateY(-1px)}
+  .type-card.active{
+    border-color:var(--accent);background:var(--accent-soft);
+    border-width:2px;padding:15px 13px 13px;
+  }
+  .type-icon-large{
+    width:42px;height:42px;flex-shrink:0;
+    border-radius:8px;background:#fff;border:1.5px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Noto Serif TC',serif;font-weight:900;font-size:22px;
+    color:var(--ink);
+  }
+  .type-card.active .type-icon-large{border-color:var(--accent);background:#fff}
+  .type-body{flex:1;min-width:0}
+  .type-name-row{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
+  .type-name{font-size:15px;font-weight:700;color:var(--ink);line-height:1.1}
+  .type-name-en{font-size:11px;font-family:'Fraunces',serif;font-style:italic;color:var(--ink-muted)}
+  .type-desc{font-size:12px;color:var(--ink-muted);line-height:1.45}
+  .type-card.active .type-desc{color:var(--ink-soft)}
+
+  .sub-control{
+    margin-top:14px;padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+  .sub-control-label{
+    font-size:11px;font-weight:600;color:var(--ink-soft);
+    margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;
+    display:flex;align-items:center;gap:6px;
+  }
+  .sub-control-label .badge{
+    padding:1px 7px;font-size:10px;font-weight:500;
+    background:var(--accent-soft);color:var(--accent-dark);
+    border-radius:8px;font-family:'Fraunces',serif;font-style:italic;text-transform:none;
+  }
+
+  .kendoku-info-box{
+    background:var(--paper-2);border:1px solid var(--line-soft);
+    border-radius:8px;padding:11px 13px;font-size:12.5px;
+    line-height:1.55;color:var(--ink-soft);
+  }
+  .kendoku-info-box strong{color:var(--ink)}
+  .ops-display{
+    display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;
+  }
+  .op-chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:28px;height:28px;padding:0 8px;
+    background:#fff;border:1.5px solid var(--accent);
+    border-radius:6px;color:var(--accent);
+    font-family:'Fraunces',serif;font-weight:700;font-size:15px;
+  }
+  .op-chip.muted{
+    border-color:var(--line);color:var(--ink-muted);background:var(--paper-2);
+    opacity:.5;
+  }
+
+  .diff-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+  }
+  @media (max-width:520px){.diff-grid{grid-template-columns:repeat(2,1fr)}}
+  .diff-card{
+    padding:10px 4px 8px;background:#fff;
+    border:1.5px solid var(--line);border-radius:8px;
+    cursor:pointer;text-align:center;transition:all .15s;
+  }
+  .diff-card:hover{border-color:var(--ink-soft)}
+  .diff-card.active{border-color:var(--accent);background:var(--accent-soft);border-width:2px;padding:9px 3px 7px}
+  .diff-dots{font-size:14px;line-height:1;letter-spacing:1px;margin-bottom:4px;color:var(--accent)}
+  .diff-name{font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.1}
+  .diff-en{font-size:10px;font-family:'Fraunces',serif;font-style:italic;color:var(--ink-muted);margin-top:2px}
+
+  .check{
+    display:flex;align-items:center;gap:8px;padding:8px 10px;
+    background:#fff;border:1px solid var(--line);border-radius:7px;
+    cursor:pointer;font-size:13.5px;user-select:none;
+  }
+  .check input{accent-color:var(--accent);width:16px;height:16px}
+
+  .help-text{font-size:11.5px;color:var(--ink-muted);margin-top:5px;line-height:1.5}
+
+  .btn{
+    padding:10px 18px;font-family:inherit;font-size:14px;font-weight:600;
+    border:none;border-radius:8px;cursor:pointer;transition:all .15s;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 0 var(--accent-dark)}
+  .btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 3px 0 #143a55}
+  .btn-primary:active{transform:translateY(1px);box-shadow:0 1px 0 var(--accent-dark)}
+  .btn-dark{background:var(--ink);color:var(--paper);box-shadow:0 2px 0 #000}
+  .btn-dark:hover{background:#000;transform:translateY(-1px)}
+  .btn-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--ink)}
+  .btn-sm{padding:6px 12px;font-size:12.5px;font-weight:600}
+
+  .action-bar{
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    margin-bottom:20px;padding:14px 18px;
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;
+  }
+  .action-bar .meta{
+    margin-right:auto;font-size:13px;color:var(--ink-soft);
+    display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  }
+  .action-bar .meta strong{color:var(--ink);font-family:'Fraunces',serif;font-weight:700}
+
+  .preview-area{
+    background:#dccdb0;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='1' fill='%23b0a085' opacity='0.4'/></svg>");
+    padding:24px;border-radius:10px;min-height:400px;
+    border:1px solid var(--line);
+  }
+  .preview-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    gap:32px;
+  }
+  .preview-card-wrap{
+    background:#fff;padding:14px;border-radius:6px;
+    box-shadow:0 4px 12px rgba(0,0,0,.15), 0 1px 0 rgba(0,0,0,.08);
+    transform:rotate(-.4deg);
+    transition:transform .2s;
+  }
+  .preview-card-wrap:nth-child(2n){transform:rotate(.5deg)}
+  .preview-card-wrap:nth-child(3n){transform:rotate(-.3deg)}
+  .preview-card-wrap:hover{transform:rotate(0) scale(1.02)}
+  .preview-label{
+    font-family:'Fraunces',serif;font-style:italic;font-size:12px;
+    color:var(--ink-muted);text-align:center;margin-top:8px;
+  }
+  .preview-label.answer{color:var(--red);font-weight:600;font-style:normal;font-family:'Noto Sans TC',sans-serif}
+
+  .empty-state{
+    text-align:center;padding:80px 20px;color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:48px;margin-bottom:14px;opacity:.6;font-family:'Noto Serif TC',serif;font-weight:900;color:var(--accent)}
+  .empty-state h3{font-family:'Noto Serif TC',serif;font-size:20px;margin-bottom:6px;color:var(--ink)}
+  .empty-state p{font-size:14px;line-height:1.6;max-width:380px;margin:0 auto}
+
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(26,18,11,.6);
+    backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;
+    z-index:100;padding:20px;animation:fadeIn .2s;
+  }
+  .modal-bg.show{display:flex}
+  .modal{
+    background:var(--paper);border-radius:12px;padding:24px;
+    max-width:420px;width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);
+  }
+  .modal h3{font-family:'Noto Serif TC',serif;font-weight:700;font-size:20px;margin-bottom:8px}
+  .modal p{font-size:14px;color:var(--ink-soft);margin-bottom:14px;line-height:1.5}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+
+  [data-tip]{position:relative}
+  [data-tip]::after{
+    content:attr(data-tip);
+    position:absolute;bottom:100%;left:50%;transform:translateX(-50%) translateY(-4px);
+    background:var(--ink);color:#fff;padding:4px 8px;border-radius:4px;
+    font-size:11px;white-space:nowrap;pointer-events:none;
+    opacity:0;transition:opacity .15s;
+  }
+  [data-tip]:hover::after{opacity:1}
+
+  .loading{
+    position:fixed;inset:0;background:rgba(26,18,11,.55);backdrop-filter:blur(2px);
+    display:none;align-items:center;justify-content:center;z-index:200;
+  }
+  .loading.show{display:flex}
+  .loading-box{
+    background:var(--paper);padding:24px 32px;border-radius:12px;
+    text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);
+    min-width:260px;
+  }
+  .spinner{
+    width:38px;height:38px;border:3.5px solid var(--line);
+    border-top-color:var(--accent);border-radius:50%;
+    margin:0 auto 14px;animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px}
+  .loading-sub{font-size:12px;color:var(--ink-muted);font-family:'Fraunces',serif;font-style:italic}
+
+  .hidden{display:none !important}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .text-muted{color:var(--ink-muted);font-size:12.5px}
+
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--ink-muted)}
+
+  @media (max-width:760px){
+    .app{padding:14px 12px 40px}
+    .header{padding:12px 0 14px;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+    .logo{width:36px;height:36px;font-size:18px;transform:translateY(4px)}
+    .title{font-size:24px}
+    .title em{font-size:.8em}
+    .tagline{font-size:10.5px;letter-spacing:.12em}
+    .tabs{margin-bottom:18px}
+    .tab{padding:11px 14px;font-size:13.5px}
+    .tab-num{width:19px;height:19px;font-size:10px}
+    .section{padding:16px;border-radius:10px}
+    .section + .section{margin-top:14px}
+    .section-title{font-size:16px;margin-bottom:12px}
+    .field-row{grid-template-columns:1fr}
+    .input,.number{font-size:16px;padding:11px 12px}
+    .seg-btn{padding:10px 8px;font-size:13px}
+    .type-grid{grid-template-columns:1fr}
+    .check{padding:10px;font-size:14px}
+    .btn{padding:11px 16px;font-size:14px}
+    .btn-sm{padding:8px 12px;font-size:12.5px}
+    .action-bar{padding:12px;gap:8px}
+    .action-bar .meta{font-size:12.5px;gap:10px;width:100%;margin-bottom:4px}
+    .preview-area{padding:14px;border-radius:8px}
+    .preview-grid{grid-template-columns:1fr;gap:18px}
+    .preview-card-wrap{padding:10px;transform:none !important}
+    .modal{padding:18px;border-radius:10px}
+    .modal h3{font-size:17px}
+    .modal p{font-size:13.5px}
+    .preview-card-wrap:hover{transform:none}
+    .type-card:hover{transform:none}
+    [data-tip]::after{display:none}
+  }
+
+  @media (max-width:420px){
+    .title{font-size:20px}
+    .tagline{display:none}
+    .tab{padding:10px 12px;font-size:13px}
+  }
+
+  /* ============================================ */
+  /* PRINT STYLES — A4 LAYOUTS                    */
+  /* ============================================ */
+  @media screen{ .print-area{display:none} }
+  @media print{
+    body{background:#fff;padding:0;margin:0}
+    .app, .modal-bg, .loading{display:none !important}
+    .print-area{display:block}
+  }
+
+  .print-page{
+    page-break-after:always;
+    break-after:page;
+    page-break-inside:avoid;
+    break-inside:avoid;
+    box-sizing:border-box;
+  }
+  .print-page:last-child{page-break-after:auto;break-after:auto}
+
+  /* Layout 1 — 1 puzzle / A4 portrait */
+  .layout-1 .print-page{
+    width:190mm;height:277mm;
+    display:flex;
+  }
+  .layout-1 .print-page > .puzzle-card{flex:1}
+
+  /* Layout 2 — 2 puzzles / A4 LANDSCAPE (side by side) */
+  .layout-2 .print-page{
+    width:277mm;height:190mm;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6mm;
+  }
+
+  /* Layout 4 — 4 puzzles / A4 portrait (2×2) */
+  .layout-4 .print-page{
+    width:190mm;height:277mm;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;
+    gap:5mm;
+  }
+
+  .puzzle-card{
+    display:flex;flex-direction:column;
+    background:#fff;color:#000;
+    border:2px solid #000;
+    box-sizing:border-box;
+    font-family:'Noto Sans TC',sans-serif;
+    overflow:hidden;
+    position:relative;
+    container-type:inline-size;
+    padding:3.5cqw 3.5cqw 3cqw;
+  }
+  .puzzle-card.answer-card{
+    border:2px dashed var(--red);
+    background:#fffbf9;
+  }
+  .puzzle-header{
+    border-bottom:2px solid #000;
+    padding-bottom:1.8cqw;
+    margin-bottom:2.5cqw;
+    flex-shrink:0;
+  }
+  .answer-card .puzzle-header{border-bottom-color:var(--red);border-bottom-style:dashed}
+
+  .puzzle-title-row{
+    display:flex;align-items:baseline;justify-content:center;gap:2cqw;
+  }
+  .puzzle-title{
+    font-family:'Noto Serif TC',serif;font-weight:900;
+    letter-spacing:.04em;line-height:1;
+    font-size:7.5cqw;
+  }
+  .answer-card .puzzle-title{color:var(--red)}
+  .puzzle-meta{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-top:1.5cqw;
+    font-size:2.5cqw;color:#444;
+    gap:1.5cqw;
+  }
+  .puzzle-meta .diff-badge{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:600;
+    color:var(--accent);
+  }
+  .answer-card .puzzle-meta .diff-badge{color:var(--red)}
+  .puzzle-meta .puzzle-no{
+    font-family:'Fraunces',serif;font-weight:600;color:#222;
+  }
+  .puzzle-meta .name-block{
+    display:flex;align-items:center;gap:1cqw;flex:1;justify-content:center;
+  }
+  .puzzle-meta .name-label{font-family:'Noto Sans TC',sans-serif}
+  .puzzle-meta .name-line{
+    flex:1;max-width:30cqw;
+    border-bottom:.75px solid #555;
+    height:1.4em;
+  }
+
+  /* GRID WRAPPER — square always, sized to fit container */
+  .puzzle-grid-wrap{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    min-height:0;min-width:0;
+    position:relative;
+  }
+  .puzzle-grid{
+    display:grid;
+    aspect-ratio:1/1;
+    width:min(100%, 100cqh);
+    max-width:100%;
+    max-height:100%;
+    border:2.5px solid #000;
+    background:#fff;
+  }
+
+  /* ===== SUDOKU CELLS ===== */
+  .sudoku-cell{
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Noto Serif TC',serif;font-weight:600;
+    color:#000;
+    overflow:hidden;
+    line-height:1;
+    border-right:.5px solid #888;
+    border-bottom:.5px solid #888;
+  }
+  .sudoku-cell.last-col{border-right:none}
+  .sudoku-cell.last-row{border-bottom:none}
+  .sudoku-cell.box-right{border-right:2px solid #000}
+  .sudoku-cell.box-bottom{border-bottom:2px solid #000}
+
+  .sudoku-cell.given{font-weight:700}
+  .sudoku-cell.answer{color:var(--red);font-weight:600}
+  .sudoku-cell.empty{color:transparent}
+
+  .puzzle-card.size-4 .sudoku-cell{font-size:13cqw}
+  .puzzle-card.size-6 .sudoku-cell{font-size:9.5cqw}
+  .puzzle-card.size-9 .sudoku-cell{font-size:7cqw}
+
+  /* ===== KENDOKU CELLS ===== */
+  .kendoku-cell{
+    background:#fff;
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Noto Serif TC',serif;font-weight:700;
+    color:#000;
+    overflow:hidden;line-height:1;
+    border-right:.5px solid #bbb;
+    border-bottom:.5px solid #bbb;
+  }
+  .kendoku-cell.last-col{border-right:none}
+  .kendoku-cell.last-row{border-bottom:none}
+  /* Cage borders: combine via multiple box-shadows */
+  .kendoku-cell.cage-top{box-shadow:inset 0 2.5px 0 0 #000}
+  .kendoku-cell.cage-right{box-shadow:inset -2.5px 0 0 0 #000}
+  .kendoku-cell.cage-bottom{box-shadow:inset 0 -2.5px 0 0 #000}
+  .kendoku-cell.cage-left{box-shadow:inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-top.cage-right{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000}
+  .kendoku-cell.cage-top.cage-bottom{box-shadow:inset 0 2.5px 0 0 #000, inset 0 -2.5px 0 0 #000}
+  .kendoku-cell.cage-top.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-right.cage-bottom{box-shadow:inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000}
+  .kendoku-cell.cage-right.cage-left{box-shadow:inset -2.5px 0 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-bottom.cage-left{box-shadow:inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-top.cage-right.cage-bottom{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000}
+  .kendoku-cell.cage-top.cage-right.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-top.cage-bottom.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-right.cage-bottom.cage-left{box-shadow:inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+  .kendoku-cell.cage-top.cage-right.cage-bottom.cage-left{box-shadow:inset 0 2.5px 0 0 #000, inset -2.5px 0 0 0 #000, inset 0 -2.5px 0 0 #000, inset 2.5px 0 0 0 #000}
+
+  .cage-label{
+    position:absolute;
+    top:4%;left:7%;
+    font-family:'Fraunces',serif;font-weight:900;
+    color:#000;
+    line-height:.95;
+    letter-spacing:-.02em;
+    z-index:2;
+    opacity:.8;
+  }
+  .answer-card .cage-label{color:#666}
+
+  .kendoku-cell .cell-value{color:var(--red);font-weight:600}
+  .answer-card .kendoku-cell .cell-value{color:#000}
+  .kendoku-cell.single .cell-value{color:#000;font-weight:700}
+
+  .puzzle-card.size-4 .kendoku-cell .cell-value{font-size:11cqw}
+  .puzzle-card.size-6 .kendoku-cell .cell-value{font-size:8cqw}
+  .puzzle-card.size-9 .kendoku-cell .cell-value{font-size:6cqw}
+
+  .puzzle-card.size-4 .cage-label{font-size:7cqw}
+  .puzzle-card.size-6 .cage-label{font-size:5cqw}
+  .puzzle-card.size-9 .cage-label{font-size:3.5cqw}
+
+  .puzzle-corner{
+    position:absolute;
+    top:2.5cqw;right:3cqw;
+    font-family:'Fraunces',serif;font-style:italic;
+    color:var(--ink-muted);font-size:2.5cqw;font-weight:400;
+    letter-spacing:.05em;
+  }
+
+  /* ===== SCREEN PREVIEW SIZING ===== */
+  #preview-area .puzzle-card{width:100%}
+  #preview-area .puzzle-card.preview-1{aspect-ratio:190/277}
+  #preview-area .puzzle-card.preview-2{aspect-ratio:138/190}
+  #preview-area .puzzle-card.preview-4{aspect-ratio:92/138}
+
+  /* ============= PRINT AREA absolute sizes ============= */
+  #print-area .puzzle-card{padding:5mm 5mm 4mm}
+  #print-area .puzzle-header{padding-bottom:3mm;margin-bottom:4mm}
+  #print-area .puzzle-grid{border-width:1.8pt}
+  #print-area .sudoku-cell.box-right{border-right-width:1.4pt}
+  #print-area .sudoku-cell.box-bottom{border-bottom-width:1.4pt}
+  /* Kendoku cage borders for print — thicker */
+  #print-area .kendoku-cell.cage-top{box-shadow:inset 0 1.6pt 0 0 #000}
+  #print-area .kendoku-cell.cage-right{box-shadow:inset -1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-bottom{box-shadow:inset 0 -1.6pt 0 0 #000}
+  #print-area .kendoku-cell.cage-left{box-shadow:inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-right{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-bottom{box-shadow:inset 0 1.6pt 0 0 #000, inset 0 -1.6pt 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-right.cage-bottom{box-shadow:inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000}
+  #print-area .kendoku-cell.cage-right.cage-left{box-shadow:inset -1.6pt 0 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-bottom.cage-left{box-shadow:inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-right.cage-bottom{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-right.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-bottom.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-right.cage-bottom.cage-left{box-shadow:inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .kendoku-cell.cage-top.cage-right.cage-bottom.cage-left{box-shadow:inset 0 1.6pt 0 0 #000, inset -1.6pt 0 0 0 #000, inset 0 -1.6pt 0 0 #000, inset 1.6pt 0 0 0 #000}
+  #print-area .puzzle-corner{top:4mm;right:5mm}
+
+  /* Layout 1 — full-page card */
+  #print-area .puzzle-card.preview-1 .puzzle-title{font-size:32pt}
+  #print-area .puzzle-card.preview-1 .puzzle-meta{font-size:11pt;margin-top:5mm}
+  #print-area .puzzle-card.preview-1 .puzzle-corner{font-size:10pt}
+  #print-area .puzzle-card.preview-1.size-4 .sudoku-cell{font-size:46pt}
+  #print-area .puzzle-card.preview-1.size-6 .sudoku-cell{font-size:34pt}
+  #print-area .puzzle-card.preview-1.size-9 .sudoku-cell{font-size:24pt}
+  #print-area .puzzle-card.preview-1.size-4 .kendoku-cell .cell-value{font-size:38pt}
+  #print-area .puzzle-card.preview-1.size-6 .kendoku-cell .cell-value{font-size:28pt}
+  #print-area .puzzle-card.preview-1.size-9 .kendoku-cell .cell-value{font-size:19pt}
+  #print-area .puzzle-card.preview-1.size-4 .cage-label{font-size:24pt}
+  #print-area .puzzle-card.preview-1.size-6 .cage-label{font-size:19pt}
+  #print-area .puzzle-card.preview-1.size-9 .cage-label{font-size:14.5pt}
+
+  /* Layout 2 — landscape side-by-side (each card ~138×190mm) */
+  #print-area .puzzle-card.preview-2 .puzzle-title{font-size:22pt}
+  #print-area .puzzle-card.preview-2 .puzzle-meta{font-size:8.5pt;margin-top:3mm}
+  #print-area .puzzle-card.preview-2 .puzzle-corner{font-size:8pt}
+  #print-area .puzzle-card.preview-2.size-4 .sudoku-cell{font-size:32pt}
+  #print-area .puzzle-card.preview-2.size-6 .sudoku-cell{font-size:24pt}
+  #print-area .puzzle-card.preview-2.size-9 .sudoku-cell{font-size:16pt}
+  #print-area .puzzle-card.preview-2.size-4 .kendoku-cell .cell-value{font-size:26pt}
+  #print-area .puzzle-card.preview-2.size-6 .kendoku-cell .cell-value{font-size:20pt}
+  #print-area .puzzle-card.preview-2.size-9 .kendoku-cell .cell-value{font-size:13pt}
+  #print-area .puzzle-card.preview-2.size-4 .cage-label{font-size:17pt}
+  #print-area .puzzle-card.preview-2.size-6 .cage-label{font-size:13pt}
+  #print-area .puzzle-card.preview-2.size-9 .cage-label{font-size:10pt}
+
+  /* Layout 4 — small cards */
+  #print-area .puzzle-card.preview-4{padding:3.5mm 3.5mm 3mm}
+  #print-area .puzzle-card.preview-4 .puzzle-header{padding-bottom:2mm;margin-bottom:2.5mm}
+  #print-area .puzzle-card.preview-4 .puzzle-title{font-size:14pt}
+  #print-area .puzzle-card.preview-4 .puzzle-meta{font-size:6.5pt;margin-top:1.8mm}
+  #print-area .puzzle-card.preview-4 .puzzle-corner{font-size:6.5pt;top:2.5mm;right:3mm}
+  #print-area .puzzle-card.preview-4.size-4 .sudoku-cell{font-size:20pt}
+  #print-area .puzzle-card.preview-4.size-6 .sudoku-cell{font-size:14pt}
+  #print-area .puzzle-card.preview-4.size-9 .sudoku-cell{font-size:10pt}
+  #print-area .puzzle-card.preview-4.size-4 .kendoku-cell .cell-value{font-size:16pt}
+  #print-area .puzzle-card.preview-4.size-6 .kendoku-cell .cell-value{font-size:12pt}
+  #print-area .puzzle-card.preview-4.size-9 .kendoku-cell .cell-value{font-size:8pt}
+  #print-area .puzzle-card.preview-4.size-4 .cage-label{font-size:11pt}
+  #print-area .puzzle-card.preview-4.size-6 .cage-label{font-size:8pt}
+  #print-area .puzzle-card.preview-4.size-9 .cage-label{font-size:6.5pt}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="header">
+    <div class="brand">
+      <div class="logo">數</div>
+      <div>
+        <h1 class="title">數獨 · 算獨紙本生成器<em>Sudoku Studio</em></h1>
+        <div class="tagline">For teachers · For families · For all ages</div>
+      </div>
+    </div>
+    <div class="row" style="gap:8px;">
+      <button class="btn btn-ghost btn-sm" id="btn-reset" data-tip="清空所有設定">↺ 重設</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="setup"><span class="tab-num">1</span>設定</button>
+    <button class="tab" data-tab="preview"><span class="tab-num">2</span>預覽 · 列印</button>
+  </nav>
+
+  <!-- ============ SETUP PANEL ============ -->
+  <section class="panel active" id="panel-setup">
+    <div class="settings-grid">
+      <div>
+        <div class="section">
+          <div class="section-title">題目類型<span class="num">i.</span></div>
+          <div class="section-desc">選擇要產生的紙本類型。<strong>數獨</strong>練習邏輯推理,<strong>算獨</strong>結合運算與邏輯,適合搭配數學教學。</div>
+          <div class="type-grid">
+            <div class="type-card active" data-mode="sudoku">
+              <div class="type-icon-large">數</div>
+              <div class="type-body">
+                <div class="type-name-row">
+                  <span class="type-name">數獨</span>
+                  <span class="type-name-en">sudoku</span>
+                </div>
+                <div class="type-desc">經典邏輯:每行、列、宮不可重複</div>
+              </div>
+            </div>
+            <div class="type-card" data-mode="kendoku">
+              <div class="type-icon-large">算</div>
+              <div class="type-body">
+                <div class="type-name-row">
+                  <span class="type-name">算獨</span>
+                  <span class="type-name-en">calcudoku</span>
+                </div>
+                <div class="type-desc">區域運算 + 拉丁方陣推理</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-control: symbol selection (sudoku only) -->
+          <div class="sub-control" id="sudoku-sub">
+            <div class="sub-control-label">
+              填入符號 <span class="badge">數獨專用</span>
+            </div>
+            <div class="seg">
+              <button class="seg-btn active" data-symbol="number">
+                <span>1 ~ 9 數字</span>
+                <span class="seg-sub">numbers</span>
+              </button>
+              <button class="seg-btn" data-symbol="letter">
+                <span>A ~ I 字母</span>
+                <span class="seg-sub">letters</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Kendoku info -->
+          <div class="sub-control hidden" id="kendoku-sub">
+            <div class="sub-control-label">
+              算獨說明 <span class="badge">calcudoku</span>
+            </div>
+            <div class="kendoku-info-box">
+              格子被分成多個<strong>區域</strong>(以粗框包圍),區域左上角標示<strong>目標數字</strong>與<strong>算符</strong>。每行每列數字不可重複,且區域內所有數字計算後須等於目標數。難度會影響可使用的運算與區域大小。
+              <div class="ops-display" id="ops-display"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">格子尺寸<span class="num">ii.</span></div>
+          <div class="section-desc">建議幼兒從 4×4 起步、國小低年級 6×6、國小中高年級以上 9×9。</div>
+          <div class="seg" style="margin-bottom:0">
+            <button class="seg-btn" data-size="4">
+              <span>4 × 4</span>
+              <span class="seg-sub">幼兒 · ages 4+</span>
+            </button>
+            <button class="seg-btn" data-size="6">
+              <span>6 × 6</span>
+              <span class="seg-sub">初學 · ages 6+</span>
+            </button>
+            <button class="seg-btn active" data-size="9">
+              <span>9 × 9</span>
+              <span class="seg-sub">標準 · ages 9+</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">難易度<span class="num">iii.</span></div>
+          <div class="section-desc" id="diff-desc">數獨:由「提示數字」多寡決定。算獨:由「區域大小」與「運算種類」決定。</div>
+          <div class="diff-grid">
+            <div class="diff-card" data-diff="0">
+              <div class="diff-dots">●</div>
+              <div class="diff-name">入門</div>
+              <div class="diff-en">starter</div>
+            </div>
+            <div class="diff-card active" data-diff="1">
+              <div class="diff-dots">● ●</div>
+              <div class="diff-name">簡單</div>
+              <div class="diff-en">easy</div>
+            </div>
+            <div class="diff-card" data-diff="2">
+              <div class="diff-dots">● ● ●</div>
+              <div class="diff-name">中等</div>
+              <div class="diff-en">medium</div>
+            </div>
+            <div class="diff-card" data-diff="3">
+              <div class="diff-dots">● ● ● ●</div>
+              <div class="diff-name">困難</div>
+              <div class="diff-en">hard</div>
+            </div>
+            <div class="diff-card" data-diff="4">
+              <div class="diff-dots">● ● ● ● ●</div>
+              <div class="diff-name">專家</div>
+              <div class="diff-en">expert</div>
+            </div>
+          </div>
+          <div class="help-text" id="diff-help"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section">
+          <div class="section-title">紙張與份數<span class="num">iv.</span></div>
+
+          <div class="field">
+            <label class="label">每張 A4 印幾題</label>
+            <div class="seg">
+              <button class="seg-btn active" data-layout="1">
+                <span>1 題</span>
+                <span class="seg-sub">直式 · 大格</span>
+              </button>
+              <button class="seg-btn" data-layout="2">
+                <span>2 題</span>
+                <span class="seg-sub">橫式 · 並排</span>
+              </button>
+              <button class="seg-btn" data-layout="4">
+                <span>4 題</span>
+                <span class="seg-sub">直式 · 小格</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="label">題目數量</label>
+              <input type="number" class="number" id="puzzle-count" value="6" min="1" max="60">
+            </div>
+            <div class="field">
+              <label class="label">使用 A4 張數</label>
+              <input type="text" class="input" id="page-count" value="" readonly style="background:var(--paper-2);color:var(--ink-soft)">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">卡片標題</label>
+            <input type="text" class="input" id="card-title" value="數獨" maxlength="20">
+          </div>
+
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" id="opt-answer" checked>
+              <span>產生解答頁(附在題目後方)</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" id="opt-name" checked>
+              <span>顯示姓名欄位</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" id="opt-meta" checked>
+              <span>顯示難度標示與題號</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;text-align:center">
+      <button class="btn btn-primary" id="btn-generate" style="padding:14px 36px;font-size:15px">
+        ✦ 產生題本 →
+      </button>
+      <div class="text-muted" style="margin-top:8px">產生後可至「預覽 · 列印」分頁查看與下載</div>
+    </div>
+  </section>
+
+  <!-- ============ PREVIEW PANEL ============ -->
+  <section class="panel" id="panel-preview">
+    <div class="action-bar">
+      <div class="meta" id="preview-meta">
+        <span>未產生</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-regenerate">↻ 重新產生</button>
+      <button class="btn btn-ghost btn-sm" id="btn-print">🖨 列印</button>
+      <button class="btn btn-dark" id="btn-download-pdf">📥 下載 PDF</button>
+    </div>
+    <div class="preview-area" id="preview-area">
+      <div class="empty-state">
+        <div class="big">數</div>
+        <h3>還沒有題本</h3>
+        <p>請先到「設定」分頁,選擇類型、尺寸與難度後,點擊「產生題本」。</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">標題</h3>
+    <p id="modal-msg">訊息</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="modal-cancel">取消</button>
+      <button class="btn btn-primary btn-sm" id="modal-ok">確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">正在產生題目…</div>
+    <div class="loading-sub" id="loading-sub">crunching numbers</div>
+  </div>
+</div>
+
+<div class="print-area" id="print-area"></div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+const state = {
+  mode: 'sudoku',            // 'sudoku' | 'kendoku'
+  symbol: 'number',          // 'number' | 'letter'  (sudoku only)
+  size: 9,                   // 4 | 6 | 9
+  difficulty: 1,             // 0~4
+  layout: '1',               // '1' | '2' | '4'
+  puzzleCount: 6,
+  cardTitle: '數獨',
+  includeAnswer: true,
+  showName: true,
+  showMeta: true,
+  puzzles: []
+};
+
+const ALL_OPS = ['+', '−', '×', '÷'];
+const OP_BY_DIFF = {
+  0: ['+'],
+  1: ['+', '×'],
+  2: ['+', '−', '×'],
+  3: ['+', '−', '×', '÷'],
+  4: ['+', '−', '×', '÷']
+};
+const DIFF_NAMES = ['入門','簡單','中等','困難','專家'];
+
+/* ============================================================
+   UTILS
+============================================================ */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function el(sel){return document.querySelector(sel)}
+function els(sel){return document.querySelectorAll(sel)}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
+
+function getBoxDims(size){
+  if(size === 4) return {rows:2, cols:2};
+  if(size === 6) return {rows:2, cols:3};
+  if(size === 9) return {rows:3, cols:3};
+  return {rows:3, cols:3};
+}
+
+function showModal({title,msg,onOk,confirmOnly=false}){
+  el('#modal-title').textContent = title;
+  el('#modal-msg').textContent = msg;
+  el('#modal').classList.add('show');
+  el('#modal-cancel').style.display = confirmOnly ? 'none' : '';
+  el('#modal-ok').onclick = ()=>{
+    el('#modal').classList.remove('show');
+    if(onOk) onOk();
+  };
+}
+el('#modal-cancel').onclick = ()=>el('#modal').classList.remove('show');
+el('#modal').onclick = e=>{if(e.target.id==='modal') el('#modal').classList.remove('show')};
+
+function showLoading(text, sub){
+  el('#loading-text').textContent = text || '處理中…';
+  el('#loading-sub').textContent = sub || '';
+  el('#loading').classList.add('show');
+}
+function hideLoading(){ el('#loading').classList.remove('show'); }
+
+/* ============================================================
+   SUDOKU ENGINE
+============================================================ */
+function isValidSudoku(board, row, col, num, size, boxR, boxC){
+  for(let i=0;i<size;i++){
+    if(board[row][i] === num) return false;
+    if(board[i][col] === num) return false;
+  }
+  const startR = Math.floor(row/boxR)*boxR;
+  const startC = Math.floor(col/boxC)*boxC;
+  for(let r=0;r<boxR;r++){
+    for(let c=0;c<boxC;c++){
+      if(board[startR+r][startC+c] === num) return false;
+    }
+  }
+  return true;
+}
+function fillSudoku(board, size, boxR, boxC){
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(board[r][c] === 0){
+        const nums = shuffle([...Array(size)].map((_,i)=>i+1));
+        for(const n of nums){
+          if(isValidSudoku(board, r, c, n, size, boxR, boxC)){
+            board[r][c] = n;
+            if(fillSudoku(board, size, boxR, boxC)) return true;
+            board[r][c] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function generateSudokuSolution(size){
+  const {rows:boxR, cols:boxC} = getBoxDims(size);
+  const board = Array(size).fill(null).map(()=>Array(size).fill(0));
+  fillSudoku(board, size, boxR, boxC);
+  return board;
+}
+function countSolutions(board, size, boxR, boxC, limit){
+  let count = 0;
+  function findEmpty(){
+    for(let r=0;r<size;r++){
+      for(let c=0;c<size;c++){
+        if(board[r][c] === 0) return [r,c];
+      }
+    }
+    return null;
+  }
+  function solve(){
+    if(count >= limit) return;
+    const e = findEmpty();
+    if(!e){ count++; return; }
+    const [r,c] = e;
+    for(let n=1;n<=size;n++){
+      if(count >= limit) return;
+      if(isValidSudoku(board, r, c, n, size, boxR, boxC)){
+        board[r][c] = n;
+        solve();
+        board[r][c] = 0;
+      }
+    }
+  }
+  solve();
+  return count;
+}
+function getHoleTarget(size, diff){
+  const total = size*size;
+  const ratios = {
+    4:  [0.25, 0.40, 0.55, 0.65, 0.75],
+    6:  [0.30, 0.42, 0.52, 0.60, 0.67],
+    9:  [0.40, 0.48, 0.55, 0.62, 0.70]
+  };
+  return Math.round(total * ratios[size][diff]);
+}
+function createSudokuPuzzle(size, diff){
+  const {rows:boxR, cols:boxC} = getBoxDims(size);
+  const solution = generateSudokuSolution(size);
+  const puzzle = solution.map(row=>row.slice());
+  const target = getHoleTarget(size, diff);
+  const positions = [];
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      positions.push([r,c]);
+    }
+  }
+  const shuffled = shuffle(positions);
+  let removed = 0;
+  const checkUnique = diff >= 1 && size <= 6 ? true : diff >= 2;
+  for(const [r,c] of shuffled){
+    if(removed >= target) break;
+    if(puzzle[r][c] === 0) continue;
+    const backup = puzzle[r][c];
+    puzzle[r][c] = 0;
+    if(checkUnique){
+      const boardCopy = puzzle.map(row=>row.slice());
+      const n = countSolutions(boardCopy, size, boxR, boxC, 2);
+      if(n !== 1){
+        puzzle[r][c] = backup;
+        continue;
+      }
+    }
+    removed++;
+  }
+  return {kind:'sudoku', puzzle, solution};
+}
+
+/* ============================================================
+   KENDOKU (算獨) ENGINE
+============================================================ */
+function isValidLatin(board, row, col, num, size){
+  for(let i=0;i<size;i++){
+    if(board[row][i] === num) return false;
+    if(board[i][col] === num) return false;
+  }
+  return true;
+}
+function fillLatin(board, size){
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(board[r][c] === 0){
+        const nums = shuffle([...Array(size)].map((_,i)=>i+1));
+        for(const n of nums){
+          if(isValidLatin(board, r, c, n, size)){
+            board[r][c] = n;
+            if(fillLatin(board, size)) return true;
+            board[r][c] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function generateLatinSquare(size){
+  const board = Array(size).fill(null).map(()=>Array(size).fill(0));
+  fillLatin(board, size);
+  return board;
+}
+function pickCageSize(difficulty){
+  const dist = [
+    [0.45, 0.55, 0,    0   ],
+    [0.25, 0.75, 0,    0   ],
+    [0.10, 0.55, 0.35, 0   ],
+    [0.05, 0.40, 0.55, 0   ],
+    [0.05, 0.25, 0.45, 0.25]
+  ];
+  const probs = dist[difficulty];
+  const r = Math.random();
+  let acc = 0;
+  for(let i=0;i<probs.length;i++){
+    acc += probs[i];
+    if(r < acc) return i + 1;
+  }
+  return 2;
+}
+function partitionCages(size, difficulty){
+  const cageMap = Array(size).fill(null).map(()=>Array(size).fill(-1));
+  const cages = [];
+  function isUnassigned(r, c){
+    return r >= 0 && r < size && c >= 0 && c < size && cageMap[r][c] === -1;
+  }
+  while(true){
+    let seed = null;
+    for(let r=0;r<size && !seed;r++){
+      for(let c=0;c<size && !seed;c++){
+        if(cageMap[r][c] === -1) seed = [r,c];
+      }
+    }
+    if(!seed) break;
+    const id = cages.length;
+    const targetSize = pickCageSize(difficulty);
+    const cells = [seed];
+    cageMap[seed[0]][seed[1]] = id;
+    while(cells.length < targetSize){
+      const candidates = [];
+      for(const [r,c] of cells){
+        for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
+          const nr = r+dr, nc = c+dc;
+          if(isUnassigned(nr, nc) && !candidates.some(([a,b])=>a===nr&&b===nc)){
+            candidates.push([nr,nc]);
+          }
+        }
+      }
+      if(candidates.length === 0) break;
+      const pick = candidates[Math.floor(Math.random()*candidates.length)];
+      cageMap[pick[0]][pick[1]] = id;
+      cells.push(pick);
+    }
+    cages.push({ id, cells });
+  }
+  return { cages, cageMap };
+}
+function chooseOpAndTarget(values, difficulty){
+  if(values.length === 1) return { op: '', target: values[0] };
+  const allowed = OP_BY_DIFF[difficulty];
+  const ops = values.length >= 3
+    ? allowed.filter(o => o === '+' || o === '×')
+    : [...allowed];
+  if(values.length === 2){
+    const max = Math.max(...values), min = Math.min(...values);
+    if(max % min !== 0 || max === min){
+      const idx = ops.indexOf('÷');
+      if(idx >= 0) ops.splice(idx, 1);
+    }
+    if(max === min){
+      const idx = ops.indexOf('−');
+      if(idx >= 0) ops.splice(idx, 1);
+    }
+  }
+  const op = ops[Math.floor(Math.random()*ops.length)] || '+';
+  let target;
+  if(op === '+') target = values.reduce((a,b)=>a+b, 0);
+  else if(op === '×') target = values.reduce((a,b)=>a*b, 1);
+  else if(op === '−') target = Math.max(...values) - Math.min(...values);
+  else if(op === '÷') target = Math.max(...values) / Math.min(...values);
+  return { op, target };
+}
+function createKendokuPuzzle(size, difficulty){
+  const grid = generateLatinSquare(size);
+  const { cages, cageMap } = partitionCages(size, difficulty);
+  for(const cage of cages){
+    const values = cage.cells.map(([r,c]) => grid[r][c]);
+    const { op, target } = chooseOpAndTarget(values, difficulty);
+    cage.op = op;
+    cage.target = target;
+    cage.values = values;
+  }
+  return {kind:'kendoku', grid, cages, cageMap};
+}
+
+/* ============================================================
+   UI BINDINGS
+============================================================ */
+els('.type-card').forEach(c=>{
+  c.onclick = ()=>{
+    els('.type-card').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    state.mode = c.dataset.mode;
+    el('#sudoku-sub').classList.toggle('hidden', state.mode !== 'sudoku');
+    el('#kendoku-sub').classList.toggle('hidden', state.mode !== 'kendoku');
+    const defaultTitles = {sudoku:'數獨', kendoku:'算獨'};
+    if(['數獨','算獨'].includes(el('#card-title').value)){
+      el('#card-title').value = defaultTitles[state.mode];
+      state.cardTitle = defaultTitles[state.mode];
+    }
+    updateDiffHelp();
+    updateOpsDisplay();
+  };
+});
+
+els('[data-symbol]').forEach(b=>{
+  b.onclick = ()=>{
+    els('[data-symbol]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.symbol = b.dataset.symbol;
+  };
+});
+
+els('[data-size]').forEach(b=>{
+  b.onclick = ()=>{
+    els('[data-size]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.size = parseInt(b.dataset.size);
+    updateDiffHelp();
+  };
+});
+
+els('.diff-card').forEach(c=>{
+  c.onclick = ()=>{
+    els('.diff-card').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    state.difficulty = parseInt(c.dataset.diff);
+    updateDiffHelp();
+    updateOpsDisplay();
+  };
+});
+
+els('[data-layout]').forEach(b=>{
+  b.onclick = ()=>{
+    els('[data-layout]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.layout = b.dataset.layout;
+    updateMeta();
+  };
+});
+
+el('#puzzle-count').oninput = e=>{
+  state.puzzleCount = Math.max(1, Math.min(60, parseInt(e.target.value)||1));
+  updateMeta();
+};
+el('#card-title').oninput = e=>{state.cardTitle = e.target.value || '數獨'};
+el('#opt-answer').onchange = e=>{state.includeAnswer = e.target.checked; updateMeta()};
+el('#opt-name').onchange = e=>{state.showName = e.target.checked};
+el('#opt-meta').onchange = e=>{state.showMeta = e.target.checked};
+
+function updateMeta(){
+  const perPage = parseInt(state.layout);
+  const puzzleP = Math.ceil(state.puzzleCount / perPage);
+  const ansP = state.includeAnswer ? Math.ceil(state.puzzleCount / perPage) : 0;
+  const total = puzzleP + ansP;
+  el('#page-count').value = state.includeAnswer
+    ? `${total} 張(題${puzzleP}+答${ansP})`
+    : `${total} 張`;
+}
+
+function updateDiffHelp(){
+  const total = state.size * state.size;
+  if(state.mode === 'sudoku'){
+    const holes = getHoleTarget(state.size, state.difficulty);
+    const clues = total - holes;
+    el('#diff-help').innerHTML = `${state.size}×${state.size} 數獨 · <strong style="color:var(--ink)">${DIFF_NAMES[state.difficulty]}</strong> · 約提供 <strong style="color:var(--accent)">${clues}</strong> 個提示(共 ${total} 格,需填 ${holes} 格)`;
+  } else {
+    const distName = ['1-2 格區域','2 格為主','2-3 格區域','2-3 格區域','2-4 格區域'][state.difficulty];
+    el('#diff-help').innerHTML = `${state.size}×${state.size} 算獨 · <strong style="color:var(--ink)">${DIFF_NAMES[state.difficulty]}</strong> · ${distName}`;
+  }
+}
+
+function updateOpsDisplay(){
+  if(state.mode !== 'kendoku') return;
+  const allowed = OP_BY_DIFF[state.difficulty];
+  el('#ops-display').innerHTML = ALL_OPS.map(op=>{
+    const active = allowed.includes(op);
+    return `<span class="op-chip${active?'':' muted'}">${op}</span>`;
+  }).join('');
+}
+
+updateDiffHelp();
+updateMeta();
+updateOpsDisplay();
+
+/* ============================================================
+   GENERATE
+============================================================ */
+el('#btn-generate').onclick = async ()=>{
+  if(state.mode === 'sudoku' && state.size === 9 && state.difficulty >= 3 && state.puzzleCount > 10){
+    showModal({
+      title:'產生時間提醒',
+      msg:`9×9 數獨困難/專家題目需嚴格驗證唯一解,產生 ${state.puzzleCount} 題大約需要 5~30 秒,請耐心等候。`,
+      onOk:()=>doGenerate()
+    });
+  } else {
+    doGenerate();
+  }
+};
+
+async function doGenerate(){
+  showLoading('正在產生第 1 題…', state.mode === 'sudoku' ? 'generating sudoku' : 'generating calcudoku');
+  state.puzzles = [];
+  for(let i=0;i<state.puzzleCount;i++){
+    el('#loading-text').textContent = `正在產生第 ${i+1} / ${state.puzzleCount} 題…`;
+    await new Promise(r=>setTimeout(r, 10));
+    try {
+      const result = state.mode === 'sudoku'
+        ? createSudokuPuzzle(state.size, state.difficulty)
+        : createKendokuPuzzle(state.size, state.difficulty);
+      state.puzzles.push(result);
+    } catch(err){
+      console.error('Failed at puzzle', i, err);
+      hideLoading();
+      showModal({
+        title:'產生失敗',
+        msg:`第 ${i+1} 題產生時發生錯誤,已產生 ${state.puzzles.length} 題。請降低難度或減少數量再試。`,
+        confirmOnly:true,
+        onOk:()=>{}
+      });
+      break;
+    }
+  }
+  hideLoading();
+  if(state.puzzles.length === 0) return;
+  renderPreview();
+  buildPrintArea();
+  els('.tab').forEach(x=>x.classList.remove('active'));
+  els('.panel').forEach(x=>x.classList.remove('active'));
+  el('[data-tab="preview"]').classList.add('active');
+  el('#panel-preview').classList.add('active');
+}
+
+el('#btn-regenerate').onclick = ()=>{
+  if(state.puzzles.length === 0) return;
+  doGenerate();
+};
+
+/* ============================================================
+   RENDER
+============================================================ */
+function getSymbols(size){
+  if(state.mode === 'sudoku' && state.symbol === 'letter'){
+    return ['A','B','C','D','E','F','G','H','I'].slice(0, size);
+  }
+  return Array.from({length:size}, (_,i)=>String(i+1));
+}
+
+function renderPreview(){
+  const area = el('#preview-area');
+  if(state.puzzles.length === 0){
+    area.innerHTML = `<div class="empty-state"><div class="big">數</div><h3>還沒有題本</h3><p>請先到「設定」分頁產生題本。</p></div>`;
+    el('#preview-meta').innerHTML = '<span>未產生</span>';
+    return;
+  }
+  const modeName = state.mode === 'sudoku'
+    ? `數獨(${state.symbol === 'letter' ? '字母' : '數字'})`
+    : '算獨';
+  const diffName = DIFF_NAMES[state.difficulty];
+  el('#preview-meta').innerHTML = `
+    <span>類型 · <strong>${modeName}</strong></span>
+    <span>尺寸 · <strong>${state.size}×${state.size}</strong></span>
+    <span>難度 · <strong>${diffName}</strong></span>
+    <span>題目 · <strong>${state.puzzles.length} 題</strong></span>
+    ${state.includeAnswer ? '<span>含解答頁</span>' : ''}
+  `;
+  area.innerHTML = '<div class="preview-grid"></div>';
+  const grid = area.querySelector('.preview-grid');
+  state.puzzles.forEach((p, i)=>{
+    const w = document.createElement('div');
+    w.className = 'preview-card-wrap';
+    w.innerHTML = renderCardHTML(p, i+1, 'preview-'+state.layout, false);
+    const lbl = document.createElement('div');
+    lbl.className = 'preview-label';
+    lbl.textContent = `${state.mode==='sudoku'?'puzzle':'calc'} ${i+1} of ${state.puzzles.length}`;
+    w.appendChild(lbl);
+    grid.appendChild(w);
+  });
+  if(state.includeAnswer){
+    state.puzzles.forEach((p, i)=>{
+      const w = document.createElement('div');
+      w.className = 'preview-card-wrap';
+      w.innerHTML = renderCardHTML(p, i+1, 'preview-'+state.layout, true);
+      const lbl = document.createElement('div');
+      lbl.className = 'preview-label answer';
+      lbl.textContent = `解答 #${i+1} · answer key`;
+      w.appendChild(lbl);
+      grid.appendChild(w);
+    });
+  }
+}
+
+function renderCardHTML(puzzleData, puzzleNum, sizeClass, isAnswer){
+  if(puzzleData.kind === 'sudoku') return renderSudokuCard(puzzleData, puzzleNum, sizeClass, isAnswer);
+  return renderKendokuCard(puzzleData, puzzleNum, sizeClass, isAnswer);
+}
+
+function renderHeader(puzzleNum, isAnswer){
+  const diffName = DIFF_NAMES[state.difficulty];
+  const sizeStr = `${state.size}×${state.size}`;
+  let metaHTML = '';
+  if(state.showMeta || state.showName){
+    const parts = [];
+    if(state.showMeta){
+      const modeLabel = state.mode === 'sudoku' ? '數獨' : '算獨';
+      parts.push(`<span class="diff-badge">${modeLabel} · ${diffName} · ${sizeStr}${isAnswer?' · 解答':''}</span>`);
+    }
+    if(state.showName && !isAnswer){
+      parts.push(`<span class="name-block"><span class="name-label">姓名</span><span class="name-line"></span></span>`);
+    } else if(state.showName && isAnswer){
+      parts.push(`<span style="flex:1"></span>`);
+    }
+    if(state.showMeta){
+      parts.push(`<span class="puzzle-no">No.${puzzleNum}</span>`);
+    }
+    metaHTML = `<div class="puzzle-meta">${parts.join('')}</div>`;
+  }
+  const cornerText = state.mode === 'sudoku' ? 'sudoku' : 'calcudoku';
+  const cornerHTML = isAnswer ? '' : `<div class="puzzle-corner">${cornerText}</div>`;
+  const titleSuffix = isAnswer ? '<span style="color:var(--red)"> · 解答</span>' : '';
+  return {
+    headerHTML: `
+      ${cornerHTML}
+      <div class="puzzle-header">
+        <div class="puzzle-title-row">
+          <div class="puzzle-title">${escapeHTML(state.cardTitle)}${titleSuffix}</div>
+        </div>
+        ${metaHTML}
+      </div>`
+  };
+}
+
+function renderSudokuCard(data, puzzleNum, sizeClass, isAnswer){
+  const size = state.size;
+  const {rows:boxR, cols:boxC} = getBoxDims(size);
+  const symbols = getSymbols(size);
+  const board = isAnswer ? data.solution : data.puzzle;
+  const originalPuzzle = data.puzzle;
+
+  const {headerHTML} = renderHeader(puzzleNum, isAnswer);
+
+  let cellsHTML = '';
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      const classes = ['sudoku-cell'];
+      if(c === size-1) classes.push('last-col');
+      if(r === size-1) classes.push('last-row');
+      if((c+1) % boxC === 0 && c !== size-1) classes.push('box-right');
+      if((r+1) % boxR === 0 && r !== size-1) classes.push('box-bottom');
+      const v = board[r][c];
+      let content = '';
+      if(v === 0){
+        classes.push('empty');
+      } else {
+        const sym = symbols[v-1] || v;
+        content = sym;
+        if(isAnswer && originalPuzzle[r][c] === 0){
+          classes.push('answer');
+        } else {
+          classes.push('given');
+        }
+      }
+      cellsHTML += `<div class="${classes.join(' ')}">${content === '' ? '' : escapeHTML(content)}</div>`;
+    }
+  }
+
+  const gridStyle = `grid-template-columns:repeat(${size},1fr);grid-template-rows:repeat(${size},1fr)`;
+  return `<div class="puzzle-card ${sizeClass} size-${size}${isAnswer?' answer-card':''}">
+    ${headerHTML}
+    <div class="puzzle-grid-wrap">
+      <div class="puzzle-grid" style="${gridStyle}">${cellsHTML}</div>
+    </div>
+  </div>`;
+}
+
+function renderKendokuCard(data, puzzleNum, sizeClass, isAnswer){
+  const size = state.size;
+  const { grid, cages, cageMap } = data;
+
+  const {headerHTML} = renderHeader(puzzleNum, isAnswer);
+
+  // determine leader (top-left-most cell) for each cage
+  const leaders = {};
+  for(const cage of cages){
+    let leader = cage.cells[0];
+    for(const [r,c] of cage.cells){
+      if(r < leader[0] || (r === leader[0] && c < leader[1])){
+        leader = [r,c];
+      }
+    }
+    leaders[cage.id] = leader;
+  }
+
+  let cellsHTML = '';
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      const cageId = cageMap[r][c];
+      const cage = cages[cageId];
+      const isLeader = r === leaders[cageId][0] && c === leaders[cageId][1];
+      const isSingle = cage.cells.length === 1;
+      const classes = ['kendoku-cell'];
+      if(c === size-1) classes.push('last-col');
+      if(r === size-1) classes.push('last-row');
+      if(isSingle) classes.push('single');
+      if(r === 0 || cageMap[r-1][c] !== cageId) classes.push('cage-top');
+      if(r === size-1 || cageMap[r+1][c] !== cageId) classes.push('cage-bottom');
+      if(c === 0 || cageMap[r][c-1] !== cageId) classes.push('cage-left');
+      if(c === size-1 || cageMap[r][c+1] !== cageId) classes.push('cage-right');
+
+      let labelHTML = '';
+      if(isLeader && !isSingle){
+        labelHTML = `<span class="cage-label">${cage.target}${cage.op}</span>`;
+      }
+
+      // Cell value display rules:
+      // - Single-cell cage: always show value (it's a "given")
+      // - Multi-cell cage in puzzle: empty
+      // - Multi-cell cage in answer: show value
+      let valueHTML = '';
+      if(isSingle){
+        valueHTML = `<span class="cell-value">${grid[r][c]}</span>`;
+      } else if(isAnswer){
+        valueHTML = `<span class="cell-value">${grid[r][c]}</span>`;
+      }
+
+      cellsHTML += `<div class="${classes.join(' ')}">${labelHTML}${valueHTML}</div>`;
+    }
+  }
+
+  const gridStyle = `grid-template-columns:repeat(${size},1fr);grid-template-rows:repeat(${size},1fr)`;
+  return `<div class="puzzle-card ${sizeClass} size-${size}${isAnswer?' answer-card':''}">
+    ${headerHTML}
+    <div class="puzzle-grid-wrap">
+      <div class="puzzle-grid" style="${gridStyle}">${cellsHTML}</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   BUILD PRINT AREA
+============================================================ */
+function buildPrintArea(){
+  const layout = state.layout;
+  const orientation = layout === '2' ? 'landscape' : 'portrait';
+  el('#dynamic-print-style').textContent = `@page { size: A4 ${orientation}; margin: 10mm; }`;
+
+  const area = el('#print-area');
+  area.className = 'print-area layout-' + layout;
+  area.innerHTML = '';
+
+  const perPage = parseInt(layout);
+  const sizeClass = 'preview-' + layout;
+
+  // Puzzle pages
+  const puzzleCards = state.puzzles.map((p, i)=>renderCardHTML(p, i+1, sizeClass, false));
+  for(let i=0;i<puzzleCards.length;i+=perPage){
+    const page = document.createElement('div');
+    page.className = 'print-page';
+    const group = puzzleCards.slice(i, i+perPage);
+    group.forEach(html=>{
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      page.appendChild(tmp.firstElementChild);
+    });
+    if(group.length < perPage){
+      for(let j=group.length;j<perPage;j++){
+        const blank = document.createElement('div');
+        blank.style.cssText = 'border:1px dashed #ccc;border-radius:4px;opacity:0';
+        page.appendChild(blank);
+      }
+    }
+    area.appendChild(page);
+  }
+
+  if(state.includeAnswer){
+    const answerCards = state.puzzles.map((p, i)=>renderCardHTML(p, i+1, sizeClass, true));
+    for(let i=0;i<answerCards.length;i+=perPage){
+      const page = document.createElement('div');
+      page.className = 'print-page';
+      const group = answerCards.slice(i, i+perPage);
+      group.forEach(html=>{
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        page.appendChild(tmp.firstElementChild);
+      });
+      if(group.length < perPage){
+        for(let j=group.length;j<perPage;j++){
+          const blank = document.createElement('div');
+          blank.style.cssText = 'border:1px dashed #ccc;border-radius:4px;opacity:0';
+          page.appendChild(blank);
+        }
+      }
+      area.appendChild(page);
+    }
+  }
+}
+
+el('#btn-print').onclick = ()=>window.print();
+
+/* ============================================================
+   PDF
+============================================================ */
+const pdfBtn = el('#btn-download-pdf');
+pdfBtn.onclick = downloadPDF;
+
+async function downloadPDF(){
+  if(state.puzzles.length === 0){
+    showModal({title:'尚未產生題本', msg:'請先產生題本再下載 PDF。', confirmOnly:true, onOk:()=>{}});
+    return;
+  }
+  if(typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined'){
+    showModal({title:'資源載入中', msg:'PDF 函式庫尚未載入完成,請稍候 1~2 秒再試一次。', confirmOnly:true, onOk:()=>{}});
+    return;
+  }
+  const originalText = pdfBtn.innerHTML;
+  pdfBtn.disabled = true;
+  pdfBtn.innerHTML = '⏳ 產生中…';
+  try {
+    buildPrintArea();
+    const printArea = el('#print-area');
+    const prevCss = printArea.style.cssText;
+    printArea.style.cssText = 'display:block !important; position:fixed; left:-10000px; top:0; background:#fff;';
+
+    const isLandscape = state.layout === '2';
+    const pageW = isLandscape ? 297 : 210;
+    const pageH = isLandscape ? 210 : 297;
+    const margin = 10;
+    const contentW = pageW - margin*2;
+    const contentH = pageH - margin*2;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: isLandscape ? 'landscape' : 'portrait',
+      unit:'mm', format:'a4', compress:true
+    });
+
+    const pages = printArea.querySelectorAll('.print-page');
+    for(let i=0; i<pages.length; i++){
+      pdfBtn.innerHTML = `⏳ 第 ${i+1}/${pages.length} 頁`;
+      await new Promise(r=>requestAnimationFrame(r));
+      const canvas = await html2canvas(pages[i], {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: true
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      if(i > 0) pdf.addPage('a4', isLandscape ? 'landscape' : 'portrait');
+      pdf.addImage(imgData, 'JPEG', margin, margin, contentW, contentH);
+    }
+    printArea.style.cssText = prevCss;
+    const modeStr = state.mode === 'sudoku' ? '數獨' : '算獨';
+    const filename = `${state.cardTitle || modeStr}-${state.size}x${state.size}-${DIFF_NAMES[state.difficulty]}-${state.puzzles.length}題.pdf`;
+    pdf.save(filename);
+  } catch(err) {
+    console.error(err);
+    showModal({title:'產生失敗', msg:'PDF 產生時發生錯誤,請重試或改用「列印 → 另存為 PDF」。', confirmOnly:true, onOk:()=>{}});
+    el('#print-area').style.cssText = '';
+  } finally {
+    pdfBtn.disabled = false;
+    pdfBtn.innerHTML = originalText;
+  }
+}
+
+/* ============================================================
+   TABS / RESET
+============================================================ */
+els('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    els('.tab').forEach(x=>x.classList.remove('active'));
+    els('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    el('#panel-' + t.dataset.tab).classList.add('active');
+  };
+});
+
+el('#btn-reset').onclick = ()=>{
+  showModal({
+    title:'重設所有設定', msg:'這會清空所有題目與設定,確定嗎?',
+    onOk:()=>location.reload()
+  });
+};
+</script>
+</body>
+</html>
